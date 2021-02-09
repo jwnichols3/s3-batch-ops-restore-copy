@@ -28,11 +28,11 @@ response_list = []
 object_count = 0
 restore_complete_count = 0
 restore_incomplete_count = 0
-response_file = "restore-check-" + batch_id + "-" + \
+detail_file = "restore-check-" + batch_id + "-" + \
     logfile_id+"-"+logfile_suffix+"-detail.log"
 summary_file = "restore-check-" + batch_id + "-" + \
     logfile_id+"-"+logfile_suffix+"-summary.log"
-detail_f = open(response_file, "a")
+detail_f = open(detail_file, "a")
 summary_f = open(summary_file, "a")
 
 s3_client = boto3.client('s3')
@@ -115,6 +115,8 @@ print(f"Avg per object: " + str(time_per_object))
 print(f"Total objects: " + str(object_count))
 print(f"Objects restore complete: " + str(restore_complete_count))
 print(f"Objects restore incomplete: " + str(restore_incomplete_count))
+print(f"Summary Log: " + summary_file)
+print(f"Detail Log:  " + detail_file)
 
 detail_f.close()
 detail_f.close()
