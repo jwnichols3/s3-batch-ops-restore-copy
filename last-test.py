@@ -16,7 +16,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 start_time = time.localtime()
-print(f"Timer started at {time.strftime('%X', start_time)}")
+print(f"Started at {time.strftime('%X', start_time)}")
 
 batch_id = args.batchname
 inventory_file = args.inventory_file
@@ -33,8 +33,6 @@ starting_point = 0
 
 now = time.localtime()
 
-print(f"=== Started at {time.strftime('%X', start_time)}")
-
 print(f"Analyzing inventory file...")
 if last:
     linecount = len(open(inventory_file).readlines())
@@ -46,7 +44,6 @@ if starting_point < 0:
           " lines. The last variable of " + str(last) + " must be equal or less than that.")
     quit()
 
-print("Line count: " + str(linecount))
 print("Number of lines in the " + inventory_file +
       " inventory file: " + str(linecount))
 print("Show the last " + str(last) + " lines.")
@@ -61,11 +58,11 @@ with open(inventory_file) as file:
         if current_row < starting_point:
             current_row += 1
             continue
-        else:
-            print("Current row:" + str(current_row))
-            current_row += 1
-            object_count += 1
-            print(row)
+
+        print("Current row:" + str(current_row))
+        current_row += 1
+        object_count += 1
+        print(row)
 
 
 end_time = time.localtime()

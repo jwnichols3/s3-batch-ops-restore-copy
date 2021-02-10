@@ -11,23 +11,33 @@ parser.add_argument('--inventory_file', '-i', required=True,
 parser.add_argument('--batchname', '-b', default="nobatchname")
 parser.add_argument(
     '--show', action='store_true', help='This will show the list of files as they are checked.')
+parser.add_argument(
+    "--last", type=int, help='This will run the check on the last # objects in the inventory'
+)
+parser.add_argument(
+    "--dryrun", action='store_true', help='Do not run the S3 API call, just list the inventory items.'
+)
 
 args = parser.parse_args()
 start_time = time.localtime()
-print(f"Timer started at {time.strftime('%X', start_time)}")
+print(f"Started at {time.strftime('%X', start_time)}")
 
 batch_id = args.batchname
 inventory_file = args.inventory_file
 show = args.show
-
-logfile_id = time.strftime('%Y-%m-%d')
-logfile_suffix = str(int(time.time()))
+last = args.last
+dryrun = args.dryrun
 
 object_list = []
 response_list = []
 object_count = 0
 restore_complete_count = 0
 restore_incomplete_count = 0
+linecount = 0
+starting_point = 0
+
+logfile_id = time.strftime('%Y-%m-%d')
+logfile_suffix = str(int(time.time()))
 detail_file = "restore-check-" + batch_id + "-" + \
     logfile_id+"-"+logfile_suffix+"-detail.log"
 summary_file = "restore-check-" + batch_id + "-" + \
@@ -43,24 +53,59 @@ now = time.localtime()
 detail_f.write(f"=== Started at {time.strftime('%X', start_time)}" + "\n")
 summary_f.write(f"=== Started at {time.strftime('%X', start_time)}" + "\n")
 
+print(f"Analyzing inventory file...")
+if last:
+    linecount = len(open(inventory_file).readlines())
+
+starting_point = linecount - last
+
+if starting_point < 0:
+    print("ERROR The inventory file has " + str(linecount) +
+          " lines. The last variable of " + str(last) + " must be equal or less than that.")
+    quit()
+
+print("Number of lines in the " + inventory_file +
+      " inventory file: " + str(linecount))
+print("Show the last " + str(last) + " lines.")
+print("Starting point: " + str(starting_point))
+
+summary_f.write(f"Number of lines in the " + inventory_file + " inventory file: " + str(linecount) + "\n" +
+                "Show the last " +
+                str(last) + " lines starting at " + str(starting_point) + "\n"
+                )
+
+if dryrun:
+    print(f"********* DRY RUN **********")
+    print(f"Objects will not be queried. Just the inventory items will be listed.")
+
 print(f"Running...")
 with open(inventory_file) as file:
     csv_reader = csv.reader(file, delimiter=",")
+    current_row = 0
     for row in csv_reader:
+        if current_row < starting_point:
+            current_row += 1
+            continue
+
         bucket = unquote(row[0])
         object = unquote(row[1])
+
+        if dryrun:
+            print(row)
+            continue
+
         responsehead = s3_client.head_object(
             Bucket=bucket,
             Key=object
         )
 
-        if object_count % 10 == 0:
+        if (object_count % 10 == 0) and (object_count > 0):
             print(str(object_count) + " objects checked")
         if not responsehead:
             print("Does not exist: bucket = " + bucket + " object = " + object)
             detail_f.write("Object " + object + " does not exist.")
         else:
-            object_count = object_count + 1
+            object_count += 1
             if show:
                 print("Object: " + object)
             detail_f.write("Object: " + object + "\n")

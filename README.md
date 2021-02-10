@@ -33,9 +33,11 @@ There are two logfiles produced:
 
 ## Arguments
 
-* `--inventory_file` - this is the csv file with objects to check.
-* `--batchname` - a friendly name for the inventory name (restore jobs are often run in batches)
+* `--inventory_file {filename}` - this is the csv inventory file with objects to check. See above for the inventory format.
+* `--batchname {name}` - a friendly name for the inventory name (restore jobs are often run in batches).
+* `--last #` - only process the last # entries in the Inventory file.
 * `--show` - a flag to show the list of objects to the console as they are run.
+* `--dryrun` - only list the inventory file contents, do not run the S3 API call.
 
 ## Behavior
 
@@ -46,13 +48,15 @@ If the object is in Glacier, there is a value in ['ResponseMetadata']['HTTPHeade
 This value is a single line that looks like `ongoing-request="false", expiry-date="Fri, 26 Feb 2021 00:00:00 GMT"`
 
 * `ongoing-request` is set to "true" if the restore from Glacier is still happening
-## Example
+## Examples
 
 ### Batch01 showing each object
+
 This example assumes you have the `restore-check.py` file and inventory file in the current directory.
 ```
 python restore-check.py --inventory_file inventory-test-100.csv --batchname batch01 --show
 ```
+### Batch01 not showing each object
 
 This runs the inventory and doesn't show the inventory files as they are processed
 
@@ -60,8 +64,15 @@ This runs the inventory and doesn't show the inventory files as they are process
 python restore-check.py --inventory_file inventory-test-100.csv --batchname batch01
 ```
 
+### Batch01 only checking the last 100 objects.
+
 This checks the last 100 objects.
 
 ```
 python restore-check.py --inventory_file inventory-test-100.csv --batchname batch01 --last 100
 ```
+
+## TODO Items
+
+* Read the inventory from an S3 object.
+* Read the inventory from a file/object that is gzipped
