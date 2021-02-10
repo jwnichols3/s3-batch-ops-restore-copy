@@ -19,6 +19,7 @@ There are two logfiles produced:
 * `restore-check-BATCHNAME-YYYY-MM-DD-EPOCH-summary.log`
   
 `BATCHNAME` is the value entered on the command line.
+
 `YYYY-MM-DD-EPOCH` is the year, month, day and EPOCH time of the batch job. This makes the log filenamnes readable and unique.
 ## Requirements
 
@@ -32,9 +33,9 @@ There are two logfiles produced:
 
 ## Arguments
 
-* --inventory_file - this is the csv file with objects to check.
-* --batchname - a friendly name for the inventory name (restore jobs are often run in batches)
-* --show - a flag to show the list of objects to the console as they are run.
+* `--inventory_file` - this is the csv file with objects to check.
+* `--batchname` - a friendly name for the inventory name (restore jobs are often run in batches)
+* `--show` - a flag to show the list of objects to the console as they are run.
 
 ## Behavior
 
@@ -46,6 +47,21 @@ This value is a single line that looks like `ongoing-request="false", expiry-dat
 
 * `ongoing-request` is set to "true" if the restore from Glacier is still happening
 ## Example
+
+### Batch01 showing each object
+This example assumes you have the `restore-check.py` file and inventory file in the current directory.
 ```
 python restore-check.py --inventory_file inventory-test-100.csv --batchname batch01 --show
+```
+
+This runs the inventory and doesn't show the inventory files as they are processed
+
+```
+python restore-check.py --inventory_file inventory-test-100.csv --batchname batch01
+```
+
+This checks the last 100 objects.
+
+```
+python restore-check.py --inventory_file inventory-test-100.csv --batchname batch01 --last 100
 ```
