@@ -26,6 +26,7 @@ There are two logfiles produced:
 ## Requirements
 
 * AWS SDK installed (boto3)
+* Python3 smart_open module (`pip install smart_open`)
 * Python3 with modules: argparse, csv, unquote, time
 * Profile setup or running using a Role with access to the buckets/objects in question
 * Inventory file with at least two values per line:
