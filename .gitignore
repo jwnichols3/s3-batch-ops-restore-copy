@@ -2,6 +2,7 @@
 
 *.log
 inventory-test*.csv
+inventory-test*.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

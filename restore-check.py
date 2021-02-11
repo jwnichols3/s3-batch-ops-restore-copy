@@ -3,11 +3,12 @@ import boto3
 import csv
 from urllib.parse import unquote
 import time
+from smart_open import open
 
 parser = argparse.ArgumentParser(
     description="Check on status of Glacier objects restored using S3 Batch Operations.")
 parser.add_argument('--inventory_file', '-i', required=True,
-                    help='The file that has a csv formatted list of inventory to check. The first column of the CSV is the bucket, the second column is the key.')
+                    help='The file that has a csv formatted list of inventory to check. The first column of the CSV is the bucket, the second column is the key. This can be an S3 object or local file. It can also be gzipped.')
 parser.add_argument('--batchname', '-b', default="nobatchname")
 parser.add_argument(
     '--show', action='store_true', help='This will show the list of files as they are checked.')
@@ -53,26 +54,27 @@ now = time.localtime()
 detail_f.write(f"=== Started at {time.strftime('%X', start_time)}" + "\n")
 summary_f.write(f"=== Started at {time.strftime('%X', start_time)}" + "\n")
 
-print(f"Analyzing inventory file...")
 if last:
+    print(f"Analyzing inventory file...")
     linecount = len(open(inventory_file).readlines())
 
-starting_point = linecount - last
+    starting_point = linecount - last
 
-if starting_point < 0:
-    print("ERROR The inventory file has " + str(linecount) +
-          " lines. The last variable of " + str(last) + " must be equal or less than that.")
-    quit()
+    if starting_point < 0:
+        print("ERROR The inventory file has " + str(linecount) +
+              " lines. The last variable of " + str(last) + " must be equal or less than that.")
+        quit()
 
-print("Number of lines in the " + inventory_file +
-      " inventory file: " + str(linecount))
-print("Show the last " + str(last) + " lines.")
-print("Starting point: " + str(starting_point))
+    print("Number of lines in the " + inventory_file +
+          " inventory file: " + str(linecount))
+    print("Show the last " + str(last) + " lines.")
+    print("Starting point: " + str(starting_point))
 
-summary_f.write(f"Number of lines in the " + inventory_file + " inventory file: " + str(linecount) + "\n" +
-                "Show the last " +
-                str(last) + " lines starting at " + str(starting_point) + "\n"
-                )
+    summary_f.write(f"Number of lines in the " + inventory_file + " inventory file: " + str(linecount) + "\n" +
+                    "Show the last " +
+                    str(last) + " lines starting at " +
+                    str(starting_point) + "\n"
+                    )
 
 if dryrun:
     print(f"********* DRY RUN **********")
