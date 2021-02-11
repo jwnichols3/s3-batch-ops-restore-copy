@@ -6,13 +6,15 @@ Why do you need this?
 
 S3 Batch Operations Restore Job -> issues a set of Glacier async restore commands for a manifest (usually based on an Inventory).
 
-When the Restore Job finishes, the Glacier restore process can take 24-48 hours.
+When the S3 Batch Operations Restore Job finishes, the Glacier object restore process can take 24-48 hours.
 
-When the Glacier restore process completes, the objects in S3 are still listed as in "GLACIER" or "GLACIER DEEP ARCHIVE"
+When the Glacier object restore process completes, the objects in S3 are still listed as in "GLACIER" or "GLACIER DEEP ARCHIVE"
 
 You can navigate to the Console and check the "Restore progress" field and the "Expiry Date" field to see how long the file will be available.
 
 This is a way to programaticaly retrieve the restore status and expiry date for all objects in a manifest. 
+
+One assumption we are making is that the objects are processed by Glacier in the order of the manifest file. To simplify the checking of large restore jobs (100s of thousands of object or more), this program has a way to check the last # records (`--last #` option).
 
 There are two logfiles produced:
 * `restore-check-BATCHNAME-YYYY-MM-DD-EPOCH-detail.log`
@@ -33,7 +35,7 @@ There are two logfiles produced:
 
 ## Arguments
 
-* `--inventory_file {filename}` - this is the csv inventory file with objects to check. See above for the inventory format.
+* `--inventory_file {filename | S3 object URL in s3:// format}` - this is the csv inventory file with objects to check. See above for the inventory format. This can be a text CSV file or can be GZipped (.csv.gz).
 * `--batchname {name}` - a friendly name for the inventory name (restore jobs are often run in batches).
 * `--last #` - only process the last # entries in the Inventory file.
 * `--show` - a flag to show the list of objects to the console as they are run.
@@ -72,7 +74,18 @@ This checks the last 100 objects.
 python restore-check.py --inventory_file inventory-test-100.csv --batchname batch01 --last 100
 ```
 
-## TODO Items
+### Batch01 inventory in S3 only checking the last 100 objects.
 
-* Read the inventory from an S3 object.
-* Read the inventory from a file/object that is gzipped
+This checks the last 100 objects based on an Inventory file stored in S3.
+
+```
+python restore-check.py --inventory_file s3://my_bucket/2021-02-10/inventory-test-all.csv --batchname batch01 --last 100
+```
+
+This checks the last 100 objects based on an Inventory file that is gzipped and stored in S3.
+
+```
+python restore-check.py --inventory_file s3://my_bucket/2021-02-11/inventory-test-all.csv.gz --batchname batch01 --last 100
+```
+
+
