@@ -5,10 +5,14 @@ from urllib.parse import unquote
 import time
 from smart_open import open
 
+s3 = boto3.resource('s3')
+
 parser = argparse.ArgumentParser(
     description="Check on status of Glacier objects restored using S3 Batch Operations.")
 parser.add_argument('--inventory_file', '-i', required=True,
                     help='The file that has a csv formatted list of inventory to check. The first column of the CSV is the bucket, the second column is the key. This can be an S3 object or local file. It can also be gzipped.')
+parser.add_argument('--target_bucket', required=True,
+                    help="This is the target bucket for the objects. This script assumes you have bucket policies and associated rights to access")
 parser.add_argument('--batchname', '-b', default="nobatchname")
 parser.add_argument(
     '--show', action='store_true', help='This will show the list of files as they are checked.')
@@ -26,8 +30,8 @@ print(f"Started at {time.strftime('%X', start_time)}")
 batch_id = args.batchname
 inventory_file = args.inventory_file
 show = args.show
-# last = args.last
 dryrun = args.dryrun
+target_bucket = args.target_bucket
 
 object_list = []
 response_list = []
@@ -39,9 +43,9 @@ starting_point = 0
 
 logfile_id = time.strftime('%Y-%m-%d')
 logfile_suffix = str(int(time.time()))
-detail_file = "restore-check-" + batch_id + "-" + \
+detail_file = "copy-batch-" + batch_id + "-" + \
     logfile_id+"-"+logfile_suffix+"-detail.log"
-summary_file = "restore-check-" + batch_id + "-" + \
+summary_file = "copy-batch-" + batch_id + "-" + \
     logfile_id+"-"+logfile_suffix+"-summary.log"
 detail_f = open(detail_file, "a")
 summary_f = open(summary_file, "a")
@@ -74,43 +78,25 @@ with open(inventory_file) as file:
             print(row)
             continue
 
-        responsehead = s3_client.head_object(
-            Bucket=bucket,
-            Key=object
-        )
+    csv_reader = csv.reader(file, delimiter=",")
+    current_row = 0
+    for row in csv_reader:
+        bucket = unquote(row[0])
+        object = unquote(row[1])
 
-        if (object_count % 10 == 0) and (object_count > 0):
-            print(str(object_count) + " objects checked")
-        if not responsehead:
-            print("Does not exist: bucket = " + bucket + " object = " + object)
-            detail_f.write("Object " + object + " does not exist.")
-        else:
-            object_count += 1
-            if show:
-                print("Object: " + object)
-            detail_f.write("Object: " + object + "\n")
-            response_http = responsehead['ResponseMetadata']['HTTPHeaders']
-            if 'x-amz-restore' in response_http:
-                restore_response = response_http['x-amz-restore']
-                restore_status = restore_response.split(", ", 1)[0]
-                restore_expiry = restore_response.split(", ", 1)[1]
+        copy_source = {
+            'Bucket': bucket,
+            'Key': object
+        }
 
-                restore_ongoing = restore_status.split("=")[1]
-                if restore_ongoing == '"false"':
-                    restore_complete_count = restore_complete_count + 1
-                else:
-                    restore_incomplete_count = restore_incomplete_count + 1
-
-#                restore_status = restore_response.split()
-#                restore_expiry = restore_response[1]
-#                print("GLACIER RESTORE! Restore Status: " + restore_response)
-            for a, b in response_http.items():
-                # print(a, b)
-                detail_f.write(a + " " + b + ", ")
-            detail_f.write("\n")
+        print("Copying " + object)
+        s3.meta.client.copy(copy_source, target_bucket, object)
 
 end_time = time.localtime()
 time_diff = time.mktime(end_time) - time.mktime(start_time)
+
+# To do here: logging
+
 
 detail_f.write(f"Objects traversed: " + str(object_count) + "\n")
 detail_f.write(f"Objects restore complete: " +

@@ -14,7 +14,9 @@ You can navigate to the Console and check the "Restore progress" field and the "
 
 This is a way to programaticaly retrieve the restore status and expiry date for all objects in a manifest. 
 
-One assumption we are making is that the objects are processed by Glacier in the order of the manifest file. To simplify the checking of large restore jobs (100s of thousands of object or more), this program has a way to check the last # records (`--last #` option).
+Update: this is an incorrect assumption
+~~One assumption we are making is that the objects are processed by Glacier in the order of the manifest file. To simplify the checking of large restore jobs (100s of thousands of object or more), this program has a way to check the last # records (`--last #` option).~~
+The Glacier service may process objects out of sequence for a variety of reasons (retry, queueing, etc)
 
 There are two logfiles produced:
 * `restore-check-BATCHNAME-YYYY-MM-DD-EPOCH-detail.log`
@@ -23,12 +25,16 @@ There are two logfiles produced:
 `BATCHNAME` is the value entered on the command line.
 
 `YYYY-MM-DD-EPOCH` is the year, month, day and EPOCH time of the batch job. This makes the log filenamnes readable and unique.
+
+## Disclaimers
+Note: this is a personal project and not meant for production use. It is on you to review for your environment. I welcome feedback.
+
 ## Requirements
 
-* AWS SDK installed (boto3)
+* AWS SDK installed (`pip install boto3`)
 * Python3 smart_open module (`pip install smart_open`)
 * Python3 with modules: argparse, csv, unquote, time
-* Profile setup or running using a Role with access to the buckets/objects in question
+* AWS Profile setup or running using a Role with access to the buckets/objects in question
 * Inventory file with at least two values per line:
   * first column: bucket name
   * second collumn: key name
@@ -51,6 +57,8 @@ If the object is in Glacier, there is a value in ['ResponseMetadata']['HTTPHeade
 This value is a single line that looks like `ongoing-request="false", expiry-date="Fri, 26 Feb 2021 00:00:00 GMT"`
 
 * `ongoing-request` is set to "true" if the restore from Glacier is still happening
+
+If an object is not there or inaccessible, an error is logged and the job continues.
 ## Examples
 
 ### Batch01 showing each object
@@ -59,7 +67,7 @@ This example assumes you have the `restore-check.py` file and inventory file in 
 ```
 python restore-check.py --inventory_file inventory-test-100.csv --batchname batch01 --show
 ```
-### Batch01 not showing each object
+### Batch01 not showing each object to the display
 
 This runs the inventory and doesn't show the inventory files as they are processed
 
@@ -89,4 +97,7 @@ This checks the last 100 objects based on an Inventory file that is gzipped and 
 python restore-check.py --inventory_file s3://my_bucket/2021-02-11/inventory-test-all.csv.gz --batchname batch01 --last 100
 ```
 
+
+## Todo
+* Unit and Use-Case Testing
 
