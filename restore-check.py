@@ -10,7 +10,8 @@ parser = argparse.ArgumentParser(
     description="Check on status of Glacier objects restored using S3 Batch Operations.")
 parser.add_argument('--inventory_file', '-i', required=True,
                     help='The file that has a csv formatted list of inventory to check. The first column of the CSV is the bucket, the second column is the key. This can be an S3 object or local file. It can also be gzipped.')
-parser.add_argument('--batchname', '-b', default="nobatchname")
+parser.add_argument('--batchname', '-b', default="nobatchname",
+                    help="Use batchname as a way to name the run of the script for logging purposes.")
 parser.add_argument(
     '--show', action='store_true', help='This will show the list of files as they are checked.')
 parser.add_argument(

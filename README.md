@@ -1,5 +1,7 @@
 # AWS S3 Batch Operations launched Restore Status Check
 
+For [batch-copy.py README](README_copy-batch.md)
+
 Github Repo: https://github.com/jwnichols3/s3-batch-ops-restore-status-check
 
 Why do you need this? 
