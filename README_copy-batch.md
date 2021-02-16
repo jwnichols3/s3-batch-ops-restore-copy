@@ -67,16 +67,14 @@ python copy-batch.py --inventory_file s3://bucket_name/inventory-test-100.csv.gz
 Ideal method is to use an EC2 instance to generate these so you're able to use the AWS network. Here are a set of commands to use to generate multi-GB sized files. Note: you will need an instance that has more memory in GB than the largest file you want to create. Also, your volume has to support the size of files as well (alternatively you can create, copy, then delete the file sequencially).
 
 ```
-dd if=/dev/zero of=2gb-file bs=1000000000 count=2
-dd if=/dev/zero of=3gb-file bs=1000000000 count=3
-dd if=/dev/zero of=4gb-file bs=1000000000 count=4
-dd if=/dev/zero of=5gb-file bs=1000000000 count=5
-dd if=/dev/zero of=6gb-file bs=1000000000 count=6
-dd if=/dev/zero of=7gb-file bs=1000000000 count=7
-dd if=/dev/zero of=8gb-file bs=1000000000 count=8
-dd if=/dev/zero of=9gb-file bs=1000000000 count=9
-dd if=/dev/zero of=10gb-file bs=1000000000 count=10
-dd if=/dev/zero of=11gb-file bs=1000000000 count=11
+yes test string | head -c 2GB > 2gb-file.log
+yes test string | head -c 5GB > 5gb-file.log
+yes test string | head -c 6GB > 6gb-file.log
+yes test string | head -c 7GB > 7gb-file.log
+yes test string | head -c 8GB > 8gb-file.log
+yes test string | head -c 9GB > 9gb-file.log
+yes test string | head -c 10GB > 10gb-file.log
+yes test string | head -c 11GB > 11gb-file.log
 
 ```
 
