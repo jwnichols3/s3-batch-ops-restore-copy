@@ -62,6 +62,32 @@ python copy-batch.py --inventory_file s3://bucket_name/inventory-test-100.csv.gz
 ```
 
 
+## Generating Large Files (Linux) for Testing
+
+Ideal method is to use an EC2 instance to generate these so you're able to use the AWS network. Here are a set of commands to use to generate multi-GB sized files. Note: you will need an instance that has more memory in GB than the largest file you want to create. Also, your volume has to support the size of files as well (alternatively you can create, copy, then delete the file sequencially).
+
+```
+dd if=/dev/zero of=2gb-file bs=1000000000 count=2
+dd if=/dev/zero of=3gb-file bs=1000000000 count=3
+dd if=/dev/zero of=4gb-file bs=1000000000 count=4
+dd if=/dev/zero of=5gb-file bs=1000000000 count=5
+dd if=/dev/zero of=6gb-file bs=1000000000 count=6
+dd if=/dev/zero of=7gb-file bs=1000000000 count=7
+dd if=/dev/zero of=8gb-file bs=1000000000 count=8
+dd if=/dev/zero of=9gb-file bs=1000000000 count=9
+dd if=/dev/zero of=10gb-file bs=1000000000 count=10
+dd if=/dev/zero of=11gb-file bs=1000000000 count=11
+
+```
+
+Copy the files to the source S3-bucket for testing
+
+```
+s3 cp ./2g-file s3://target_bucket
+```
+
+
+
 ## Todo
 * Unit and Use-Case Testing
 
