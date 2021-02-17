@@ -35,6 +35,7 @@ Note: this is a personal project and not meant for production use. It is on you 
 * `--inventory_file {filename | S3 object URL in s3:// format}` - this is the csv inventory file with objects to check. See above for the inventory format. This can be a text CSV file or can be GZipped (.csv.gz).
 * `--batchname {name}` - a friendly name for the inventory name (restore jobs are often run in batches).
 * `--target_bucket` - the target bucket for the objects.
+* `--profile` - use this to specify an AWS profile (as found in the `~./aws/credentials` file)
 * `--dryrun` - only list the inventory file contents, do not run the S3 API call.
 
 ## Behavior

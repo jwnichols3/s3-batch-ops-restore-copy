@@ -20,10 +20,11 @@ Update: this is an incorrect assumption
 ~~One assumption we are making is that the objects are processed by Glacier in the order of the manifest file. To simplify the checking of large restore jobs (100s of thousands of object or more), this program has a way to check the last # records (`--last #` option).~~
 The Glacier service may process objects out of sequence for a variety of reasons (retry, queueing, etc)
 
-There are two logfiles produced:
+There are two logfiles produced and one CSV with the inventory output:
 * `restore-check-BATCHNAME-YYYY-MM-DD-EPOCH-detail.log`
 * `restore-check-BATCHNAME-YYYY-MM-DD-EPOCH-summary.log`
-  
+* `restore-check-inventory-report-BATCHNAME-YYYY-MM-DD-EPOCH.csv`
+
 `BATCHNAME` is the value entered on the command line.
 
 `YYYY-MM-DD-EPOCH` is the year, month, day and EPOCH time of the batch job. This makes the log filenamnes readable and unique.
@@ -48,8 +49,8 @@ Note: this is a personal project and not meant for production use. It is on you 
 * `--batchname {name}` - a friendly name for the inventory name (restore jobs are often run in batches).
 * `--last #` - only process the last # entries in the Inventory file.
 * `--show` - a flag to show the list of objects to the console as they are run.
+* `--profile` - use this to specify an AWS profile (as found in the `~./aws/credentials` file)
 * `--dryrun` - only list the inventory file contents, do not run the S3 API call.
-
 ## Behavior
 
 This script will make an `s3 client head_object` call for each line in the CSV file.
@@ -61,8 +62,9 @@ This value is a single line that looks like `ongoing-request="false", expiry-dat
 * `ongoing-request` is set to "true" if the restore from Glacier is still happening
 
 If an object is not there or inaccessible, an error is logged and the job continues.
-## Examples
 
+If an object is restored and available for copy, it is written to the Inventory Report CSV file.
+## Examples
 ### Batch01 showing each object
 
 This example assumes you have the `restore-check.py` file and inventory file in the current directory.
@@ -100,6 +102,18 @@ python restore-check.py --inventory_file s3://my_bucket/2021-02-11/inventory-tes
 ```
 
 
+## Utilities and Learning
+
+I'm still learning Python so I've created a bunch of utility and learning scripts.
+
+* big-file-generate-script.py - this python script creates a shell script that will generate a number of large files. There are no parameters on this script, so you will have to edit it directly.
+* big-file-generate-some.sh - this is a shell script that generates a handful of large files (2GB, 5GB, 6GB - 11GB) that you can use for copy testing.
+* big-file-manifest-generate-script.py - this will generate a corresponding manifest file to the files generated using the big-file-generate-script.py script.
+* copy-test.py - learning the AWS S3 boto3 copy process.
+* last-test.py - learning ways to parse the last *n* records from a CSV file.
+* s3-content-read.py - a hacky way to read data from an S3 file... I ended up using smart_open module instead.
+* time-struct.py - playing with time in the Tardis.
+* try-loop.py - loop-de-looping while trying
 ## Todo
 * Unit and Use-Case Testing
 
