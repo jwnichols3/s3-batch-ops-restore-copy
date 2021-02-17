@@ -196,8 +196,9 @@ print(f"Objects restore complete: " + str(restore_complete_count))
 print(f"Objects restore incomplete: " + str(restore_incomplete_count))
 print(f"Objects with errors: " +
       str(objecthead_error_count) + "\n")
-print(f"Summary Log: " + summary_file)
-print(f"Detail Log:  " + detail_file)
+print(f"Summary Log:                 " + summary_file)
+print(f"Detail Log:                  " + detail_file)
+print(f"Restore Check Inventory CSV: " + inventory_report_csv)
 
 detail_f.close()
 detail_f.close()
