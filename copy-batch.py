@@ -101,10 +101,10 @@ with open(inventory_file) as file:
                             time.localtime()) + " - " + object + " - end")
         later = time.time()
         time_difference = int(later - now)
-        print("Time to copy: " + str(time_difference))
+        print("Time to copy object " + object + ": " + str(time_difference))
 
         detail_f.write(time.strftime("%Y-%m-%d, %H:%M:%S",
-                                     time.localtime()) + " - " + object + " in " + str(time_difference) + " seconds.")
+                                     time.localtime()) + " - " + object + ": " + str(time_difference) + "\n")
         copy_complete_count += 1
 
 end_time = time.localtime()
