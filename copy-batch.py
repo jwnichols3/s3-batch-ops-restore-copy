@@ -24,6 +24,9 @@ parser.add_argument(
 parser.add_argument(
     "--dryrun", action='store_true', help='Do not run the S3 API call, just list the inventory items.'
 )
+parser.add_argument(
+    "--profile", help='Use a specific AWS Profile'
+)
 
 args = parser.parse_args()
 start_time = time.localtime()
@@ -31,6 +34,7 @@ batch_id = args.batchname
 inventory_file = args.inventory_file
 show = args.show
 dryrun = args.dryrun
+profile = args.profile
 target_bucket = args.target_bucket
 object_list = []
 response_list = []
@@ -46,11 +50,18 @@ detail_file = "copy-batch-" + batch_id + "-" + \
     logfile_id+"-"+logfile_suffix+"-detail.log"
 summary_file = "copy-batch-" + batch_id + "-" + \
     logfile_id+"-"+logfile_suffix+"-summary.log"
+# If a profile is specified, use it (error out if the profile isn't found)
+if profile:
+    try:
+        boto3.setup_default_session(profile_name=profile)
+    except Exception as err:
+        print(err)
+        exit()
+
+s3_client = boto3.client('s3')
+now = time.localtime()
 detail_f = open(detail_file, "a")
 summary_f = open(summary_file, "a")
-s3_client = boto3.client('s3')
-
-now = time.localtime()
 
 print(f"Started at {time.strftime('%X', start_time)}")
 detail_f.write(f"=== Started at {time.strftime('%X', start_time)}" + "\n")
@@ -103,6 +114,8 @@ with open(inventory_file) as file:
         time_difference = int(later - now)
         print("Time to copy object " + object + ": " + str(time_difference))
 
+        detail_f.write(time.strftime("%Y-%m-%d, %H:%M:%S",
+                                     time.localtime()) + " - " + object + ": " + str(time_difference) + "\n")
         detail_f.write(time.strftime("%Y-%m-%d, %H:%M:%S",
                                      time.localtime()) + " - " + object + ": " + str(time_difference) + "\n")
         copy_complete_count += 1

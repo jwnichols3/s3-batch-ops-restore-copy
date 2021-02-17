@@ -1,5 +1,8 @@
 big-file-generate-temp.sh
 big-file-manifest-temp.csv
+inventory-report*
+restore-inventory-check-report*
+restore-check-inventory-report*
 
 .vscode
 

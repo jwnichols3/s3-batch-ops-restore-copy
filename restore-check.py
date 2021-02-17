@@ -20,6 +20,9 @@ parser.add_argument(
 parser.add_argument(
     "--dryrun", action='store_true', help='Do not run the S3 API call, just list the inventory items.'
 )
+parser.add_argument(
+    "--profile", help='Use a specific AWS Profile'
+)
 
 args = parser.parse_args()
 start_time = time.localtime()
@@ -28,6 +31,7 @@ inventory_file = args.inventory_file
 show = args.show
 last = args.last
 dryrun = args.dryrun
+profile = args.profile
 object_list = []
 response_list = []
 object_count = 0
@@ -38,14 +42,23 @@ linecount = 0
 starting_point = 0
 now = time.localtime()
 logfile_id = time.strftime('%Y-%m-%d')
-logfile_suffix = str(int(time.time()))
-detail_file = "restore-check-" + batch_id + "-" + \
-    logfile_id+"-"+logfile_suffix+"-detail.log"
-summary_file = "restore-check-" + batch_id + "-" + \
-    logfile_id+"-"+logfile_suffix+"-summary.log"
+logfile_epoch_suffix = str(int(time.time()))
+logfile_suffix = batch_id + "-" + logfile_id + "-" + logfile_epoch_suffix
+detail_file = "restore-check-" + logfile_suffix + "-detail.log"
+summary_file = "restore-check-" + logfile_suffix + "-summary.log"
+inventory_report_csv = "restore-check-inventory-report-" + logfile_suffix + ".csv"
+# If a profile is specified, use it (error out if the profile isn't found)
+if profile:
+    try:
+        boto3.setup_default_session(profile_name=profile)
+    except Exception as err:
+        print(err)
+        exit()
+
+s3_client = boto3.client('s3')
 detail_f = open(detail_file, "a")
 summary_f = open(summary_file, "a")
-s3_client = boto3.client('s3')
+inventory_report_f = open(inventory_report_csv, "a")
 
 print(f"Started at {time.strftime('%X', start_time)}")
 detail_f.write(f"=== Started at {time.strftime('%X', start_time)}" + "\n")
@@ -131,6 +144,8 @@ with open(inventory_file) as file:
 
             if restore_ongoing == '"false"':
                 restore_complete_count = restore_complete_count + 1
+                inventory_report_f.write(
+                    "\'" + object + "\',\'" + restore_expiry + "\'\n")
             else:
                 restore_incomplete_count = restore_incomplete_count + 1
 
@@ -186,3 +201,4 @@ print(f"Detail Log:  " + detail_file)
 
 detail_f.close()
 detail_f.close()
+inventory_report_f.close()
