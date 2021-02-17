@@ -1,4 +1,6 @@
 big-file-generate-temp.sh
+big-file-manifest-temp.csv
+
 .vscode
 
 *.log
