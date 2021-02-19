@@ -45,6 +45,7 @@ copy_incomplete_count = 0
 copy_error_count = 0
 total_records = 0
 starting_point = 0
+total_bytes = 0
 logfile_id = time.strftime('%Y-%m-%d')
 logfile_suffix = str(int(time.time()))
 detail_file = "copy-batch-" + batch_id + "-" + \
@@ -116,40 +117,60 @@ with open(inventory_file) as file:
 
         object_count += 1
         perc_complete = object_count / total_records
+        perc_complete_str = "Percent complete: " + \
+            "{:.2%}".format(perc_complete)
 
-        print("Count: " + str(object_count))
-        print(time.strftime("%Y-%m-%d, %H:%M:%S",
-                            time.localtime()) + " - " + object + " - start")
+        print(time.strftime("%Y-%m-%d %H:%M:%S",
+                            time.localtime()) + " - " + str(object_count) + " of " + str(total_records) + " - " + object + " - start.")
         now = time.time()
 
         try:
+            resp = s3_client.head_object(
+                Bucket=bucket,
+                Key=object
+            )
+            obj_size = resp['ContentLength']
             s3.meta.client.copy(copy_source, target_bucket, object)
 
         except ClientError as e:
-            print("ERROR " + e.response['Error']['Code'] +
-                  " on Bucket: " + bucket + " / Object: " + object)
-            detail_f.write("Error " + e.response['Error']['Code'] +
-                           " on Bucket: " + bucket + " / Object: " + object)
+            error_line = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + " ERROR " + \
+                e.response['Error']['Code'] + " on Bucket: " + \
+                bucket + " / Object: " + object
+            print(error_line)
+            detail_f.write(error_line)
             copy_error_count += 1
             continue
 
-        print(time.strftime("%Y-%m-%d, %H:%M:%S",
-                            time.localtime()) + " - " + object + " - end")
         later = time.time()
         time_difference = int(later - now)
-        print("Time to copy object " + object + ": " + str(time_difference))
+        total_bytes = total_bytes + obj_size
 
-        detail_f.write(time.strftime("%Y-%m-%d, %H:%M:%S",
-                                     time.localtime()) + " - " + object + ": " + str(time_difference) + "\n")
-        detail_f.write(time.strftime("%Y-%m-%d, %H:%M:%S",
-                                     time.localtime()) + " - " + object + ": " + str(time_difference) + "\n")
+        if time_difference == 0:
+            time_difference = 1
+
+        bytes_in = obj_size / time_difference
+        bytes_in_MB = bytes_in / 1024
+
+        bytes_in_str = "Copied " + str(obj_size) + " in " + str(
+            time_difference) + " sec. Rate: " + "{:.2f}".format(bytes_in_MB) + "MB per sec."
+
+        logging_line = time.strftime("%Y-%m-%d %H:%M:%S",
+                                     time.localtime()) + " - " + str(object_count) + " of " + str(total_records) + " - " + object + " - end.   " + bytes_in_str + " " + perc_complete_str
+
+        print(logging_line)
+        detail_f.write(logging_line)
         copy_complete_count += 1
 
 end_time = time.localtime()
 time_diff = time.mktime(end_time) - time.mktime(start_time)
 
-# To do here: logging
+if time_diff == 0:
+    time_diff = 1
 
+total_bytes_MB = total_bytes / 1024
+total_bytes_GB = total_bytes_MB / 1024
+
+total_rate_GB = total_bytes_GB / time_diff
 
 detail_f.write(f"Objects traversed: " + str(object_count) + "\n")
 detail_f.write(f"Objects copied: " +
@@ -158,6 +179,8 @@ detail_f.write(f"Objects failed: " +
                str(copy_error_count) + "\n")
 detail_f.write(f"=== Ended at {time.strftime('%X', end_time)}" + "\n")
 detail_f.write(f"Total time: " + str(time_diff) + " seconds\n")
+detail_f.write(
+    "Copied " + "{:.2f}".format(total_bytes_GB) + "GB total at a rate of " + "{:.2f}".format(total_rate_GB) + "GB per sec.\n")
 
 summary_f.write(f"Objects traversed: " + str(object_count) + "\n")
 summary_f.write(f"Objects copied: " +
@@ -166,6 +189,8 @@ summary_f.write(f"Objects failed: " +
                 str(copy_error_count) + "\n")
 summary_f.write(f"=== Ended at {time.strftime('%X', end_time)}" + "\n")
 summary_f.write(f"Total time: " + str(time_diff) + " seconds\n")
+summary_f.write(
+    "Copied " + "{:.2f}".format(total_bytes_GB) + "GB total at a rate of " + "{:.2f}".format(total_rate_GB) + "GB per sec.\n")
 
 if object_count > 0:
     time_per_object = time_diff / object_count
@@ -177,6 +202,8 @@ print(f"Ended at {time.strftime('%X', end_time)}")
 print(f"Total time: " + str(time_diff) + " seconds")
 print(f"Avg per object: " + str(time_per_object))
 print(f"Total objects: " + str(object_count))
+print("Copied " + "{:.2f}".format(total_bytes_GB) +
+      "GB total at a rate of " + "{:.2f}".format(total_rate_GB) + "GB per sec.\n")
 print(f"Objects copied: " + str(copy_complete_count))
 print(f"Objects failed: " + str(copy_error_count))
 print(f"Summary Log: " + summary_file)
