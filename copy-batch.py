@@ -7,8 +7,6 @@ import time
 from smart_open import open
 import os
 
-s3 = boto3.resource('s3')
-
 parser = argparse.ArgumentParser(
     description="Copy large S3 objects from one S3 bucket to another based on a manifest file.")
 parser.add_argument('--inventory_file', '-i', required=True,
@@ -59,12 +57,20 @@ summary_file = "copy-batch-" + batch_id + "-" + \
 # Last priority: if nothing is specified, use the current user
 if env:
     try:
-        s3_client = boto3.client(
-            's3',
+        boto3.setup_default_session(
             aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
             aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+        )
+        s3_client = boto3.client(
+            's3'
+            #            aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+            #            aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
             #            aws_session_token=os.environ['AWS_SESSION_TOKEN']
         )
+        s3 = boto3.resource('s3',
+                            aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                            aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+                            )
         print(os.environ)
     except Exception as err:
         print(err)
@@ -72,8 +78,11 @@ if env:
 elif profile:
     boto3.setup_default_session(profile_name=profile)
     s3_client = boto3.client('s3')
+    s3 = boto3.resource('s3')
 else:
     s3_client = boto3.client('s3')
+    s3 = boto3.resource('s3')
+
 
 now = time.localtime()
 detail_f = open(detail_file, "a")
@@ -132,8 +141,7 @@ with open(inventory_file) as file:
             obj_size = resp['ContentLength']
             s3.meta.client.copy(copy_source, target_bucket, object,
                                 ExtraArgs={
-                                    'StorageClass': 'STANDARD_IA',
-                                    'MetadataDirective': 'COPY'
+                                    'StorageClass': 'STANDARD_IA'
                                 })
 
         except ClientError as e:
