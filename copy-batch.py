@@ -21,14 +21,11 @@ parser.add_argument(
     '--show', action='store_true', help='This will show the list of files as they are checked.')
 parser.add_argument(
     '--env', action='store_true', help="use the AWS environment variables for aws_access_key_id and aws_secret_access_key values")
-# parser.add_argument(
-#    "--last", type=int, help='This will run the check on the last # objects in the inventory'
-# )
-parser.add_argument(
-    "--dryrun", action='store_true', help='Do not run the S3 API call, just list the inventory items.'
-)
 parser.add_argument(
     "--profile", help='Use a specific AWS Profile'
+)
+parser.add_argument(
+    "--dryrun", action='store_true', help='Do not run the S3 API call, just list the inventory items.'
 )
 
 args = parser.parse_args()
@@ -46,7 +43,7 @@ object_count = 0
 copy_complete_count = 0
 copy_incomplete_count = 0
 copy_error_count = 0
-linecount = 0
+total_records = 0
 starting_point = 0
 logfile_id = time.strftime('%Y-%m-%d')
 logfile_suffix = str(int(time.time()))
@@ -54,11 +51,11 @@ detail_file = "copy-batch-" + batch_id + "-" + \
     logfile_id+"-"+logfile_suffix+"-detail.log"
 summary_file = "copy-batch-" + batch_id + "-" + \
     logfile_id+"-"+logfile_suffix+"-summary.log"
-# If a profile is specified, use it (error out if the profile isn't found)
 
-# if profile:
-#    boto3.setup_default_session(profile_name=profile)
-
+# I'm sure there is a way to do this more elegantly...
+# First priority: If --env is specified, use the environment variables
+# Second priority: if --profile is specified, use the profile name
+# Last priority: if nothing is specified, use the current user
 if env:
     try:
         s3_client = boto3.client(
@@ -85,6 +82,15 @@ print(f"Started at {time.strftime('%X', start_time)}")
 detail_f.write(f"=== Started at {time.strftime('%X', start_time)}" + "\n")
 summary_f.write(f"=== Started at {time.strftime('%X', start_time)}" + "\n")
 
+print(f"Analyzing inventory file...")
+total_records = len(open(inventory_file).readlines())
+
+print("Number of lines in the " + inventory_file +
+      " inventory file: " + str(total_records))
+
+summary_f.write(f"Number of records in the " + inventory_file +
+                " inventory file: " + str(total_records) + "\n")
+
 if dryrun:
     print(f"********* DRY RUN **********")
     print(f"Objects will not be copied. Just the inventory items will be listed.")
@@ -109,6 +115,7 @@ with open(inventory_file) as file:
         }
 
         object_count += 1
+        perc_complete = object_count / total_records
 
         print("Count: " + str(object_count))
         print(time.strftime("%Y-%m-%d, %H:%M:%S",

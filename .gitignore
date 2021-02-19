@@ -6,6 +6,8 @@ restore-check-inventory-report*
 testing-structure*
 batch-output*.json
 batch_job_output*.json
+sample-inventory*
+.DS_Store
 
 .vscode
 
