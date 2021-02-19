@@ -141,7 +141,7 @@ with open(inventory_file) as file:
             obj_size = resp['ContentLength']
             s3.meta.client.copy(copy_source, target_bucket, object,
                                 ExtraArgs={
-                                    'StorageClass': 'STANDARD_IA'
+                                    'StorageClass': 'INTELLIGENT_TIERING'
                                 })
 
         except ClientError as e:
