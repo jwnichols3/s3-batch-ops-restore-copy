@@ -130,7 +130,11 @@ with open(inventory_file) as file:
                 Key=object
             )
             obj_size = resp['ContentLength']
-            s3.meta.client.copy(copy_source, target_bucket, object)
+            s3.meta.client.copy(copy_source, target_bucket, object,
+                                ExtraArgs={
+                                    'StorageClass': 'STANDARD_IA',
+                                    'MetadataDirective': 'COPY'
+                                })
 
         except ClientError as e:
             error_line = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + " ERROR " + \
