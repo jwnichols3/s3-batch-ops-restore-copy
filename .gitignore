@@ -4,6 +4,8 @@ inventory-report*
 restore-inventory-check-report*
 restore-check-inventory-report*
 testing-structure*
+batch-output*.json
+batch_job_output*.json
 
 .vscode
 

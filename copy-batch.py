@@ -5,6 +5,7 @@ import csv
 from urllib.parse import unquote
 import time
 from smart_open import open
+import os
 
 s3 = boto3.resource('s3')
 
@@ -18,6 +19,8 @@ parser.add_argument('--batchname', '-b', default="nobatchname",
                     help="Use batchname as a way to name the run of the script for logging purposes.")
 parser.add_argument(
     '--show', action='store_true', help='This will show the list of files as they are checked.')
+parser.add_argument(
+    '--env', action='store_true', help="use the AWS environment variables for aws_access_key_id and aws_secret_access_key values")
 # parser.add_argument(
 #    "--last", type=int, help='This will run the check on the last # objects in the inventory'
 # )
@@ -34,6 +37,7 @@ batch_id = args.batchname
 inventory_file = args.inventory_file
 show = args.show
 dryrun = args.dryrun
+env = args.env
 profile = args.profile
 target_bucket = args.target_bucket
 object_list = []
@@ -51,14 +55,28 @@ detail_file = "copy-batch-" + batch_id + "-" + \
 summary_file = "copy-batch-" + batch_id + "-" + \
     logfile_id+"-"+logfile_suffix+"-summary.log"
 # If a profile is specified, use it (error out if the profile isn't found)
-if profile:
+
+# if profile:
+#    boto3.setup_default_session(profile_name=profile)
+
+if env:
     try:
-        boto3.setup_default_session(profile_name=profile)
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+            aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+            #            aws_session_token=os.environ['AWS_SESSION_TOKEN']
+        )
+        print(os.environ)
     except Exception as err:
         print(err)
         exit()
+elif profile:
+    boto3.setup_default_session(profile_name=profile)
+    s3_client = boto3.client('s3')
+else:
+    s3_client = boto3.client('s3')
 
-s3_client = boto3.client('s3')
 now = time.localtime()
 detail_f = open(detail_file, "a")
 summary_f = open(summary_file, "a")
