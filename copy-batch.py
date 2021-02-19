@@ -170,7 +170,7 @@ with open(inventory_file) as file:
                                      time.localtime()) + " - " + str(object_count) + " of " + str(total_records) + " - " + object + " - end.   " + bytes_in_str + " " + perc_complete_str
 
         print(logging_line)
-        detail_f.write(logging_line)
+        detail_f.write(logging_line + "\n")
         copy_complete_count += 1
 
 end_time = time.localtime()
