@@ -71,7 +71,7 @@ if env:
                             aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
                             aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
                             )
-        print(os.environ)
+        # print(os.environ)
     except Exception as err:
         print(err)
         exit()
