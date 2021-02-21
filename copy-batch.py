@@ -63,15 +63,11 @@ if env:
         )
         s3_client = boto3.client(
             's3'
-            #            aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
-            #            aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
-            #            aws_session_token=os.environ['AWS_SESSION_TOKEN']
         )
         s3 = boto3.resource('s3',
                             aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
                             aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
                             )
-        # print(os.environ)
     except Exception as err:
         print(err)
         exit()
@@ -88,18 +84,20 @@ now = time.localtime()
 detail_f = open(detail_file, "a")
 summary_f = open(summary_file, "a")
 
-print(f"Started at {time.strftime('%X', start_time)}")
-detail_f.write(f"=== Started at {time.strftime('%X', start_time)}" + "\n")
-summary_f.write(f"=== Started at {time.strftime('%X', start_time)}" + "\n")
+start_time_log = "=== Started at " + str(time.strftime('%X', start_time))
+print(start_time_log)
+detail_f.write(start_time_log + "\n")
+summary_f.write(start_time_log + "\n")
 
 print(f"Analyzing inventory file...")
 total_records = len(open(inventory_file).readlines())
 
-print("Number of lines in the " + inventory_file +
-      " inventory file: " + str(total_records))
+log_msg = "Number of lines in the " + inventory_file + \
+    " inventory file: " + str(total_records)
 
-summary_f.write(f"Number of records in the " + inventory_file +
-                " inventory file: " + str(total_records) + "\n")
+print(log_msg)
+summary_f.write(log_msg + "\n")
+detail_f.write(log_msg + "\n")
 
 if dryrun:
     print(f"********* DRY RUN **********")
@@ -181,43 +179,27 @@ if time_diff == 0:
 
 total_bytes_MB = total_bytes / 1024
 total_bytes_GB = total_bytes_MB / 1024
-
 total_rate_GB = total_bytes_GB / time_diff
-
-detail_f.write(f"Objects traversed: " + str(object_count) + "\n")
-detail_f.write(f"Objects copied: " +
-               str(copy_complete_count) + "\n")
-detail_f.write(f"Objects failed: " +
-               str(copy_error_count) + "\n")
-detail_f.write(f"=== Ended at {time.strftime('%X', end_time)}" + "\n")
-detail_f.write(f"Total time: " + str(time_diff) + " seconds\n")
-detail_f.write(
-    "Copied " + "{:.2f}".format(total_bytes_GB) + "GB total at a rate of " + "{:.2f}".format(total_rate_GB) + "GB per sec.\n")
-
-summary_f.write(f"Objects traversed: " + str(object_count) + "\n")
-summary_f.write(f"Objects copied: " +
-                str(copy_complete_count) + "\n")
-summary_f.write(f"Objects failed: " +
-                str(copy_error_count) + "\n")
-summary_f.write(f"=== Ended at {time.strftime('%X', end_time)}" + "\n")
-summary_f.write(f"Total time: " + str(time_diff) + " seconds\n")
-summary_f.write(
-    "Copied " + "{:.2f}".format(total_bytes_GB) + "GB total at a rate of " + "{:.2f}".format(total_rate_GB) + "GB per sec.\n")
 
 if object_count > 0:
     time_per_object = time_diff / object_count
 else:
     time_per_object = 0
 
+summary_log = \
+    "=== Ended at " + str(time.strftime('%X', end_time)) + "\n" + \
+    "Copied " + "{:.2f}".format(total_bytes_GB) + "GB total at a rate of " + "{:.2f}".format(total_rate_GB) + "GB per sec.\n" + \
+    "Objects traversed: " + str(object_count) + "\n" + \
+    "Objects copied: " + str(copy_complete_count) + "\n" + \
+    "Objects failed: " + str(copy_error_count) + "\n" + \
+    "Total time: " + str(time_diff) + " seconds\n" + \
+    "Avg per object: " + str(time_per_object)
+
+detail_f.write(summary_log)
+summary_f.write(summary_log)
+
 # Screen Output
-print(f"Ended at {time.strftime('%X', end_time)}")
-print(f"Total time: " + str(time_diff) + " seconds")
-print(f"Avg per object: " + str(time_per_object))
-print(f"Total objects: " + str(object_count))
-print("Copied " + "{:.2f}".format(total_bytes_GB) +
-      "GB total at a rate of " + "{:.2f}".format(total_rate_GB) + "GB per sec.\n")
-print(f"Objects copied: " + str(copy_complete_count))
-print(f"Objects failed: " + str(copy_error_count))
+print(summary_log)
 print(f"Summary Log: " + summary_file)
 print(f"Detail Log:  " + detail_file)
 
