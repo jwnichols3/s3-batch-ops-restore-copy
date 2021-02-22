@@ -18,6 +18,8 @@ parser.add_argument(
     "--last", type=int, help='This will run the check on the last # objects in the inventory'
 )
 parser.add_argument(
+    '--env', action='store_true', help="use the AWS environment variables for aws_access_key_id and aws_secret_access_key values")
+parser.add_argument(
     "--dryrun", action='store_true', help='Do not run the S3 API call, just list the inventory items.'
 )
 parser.add_argument(
@@ -31,6 +33,7 @@ inventory_file = args.inventory_file
 show = args.show
 last = args.last
 dryrun = args.dryrun
+env = args.env
 profile = args.profile
 object_list = []
 response_list = []
@@ -47,27 +50,62 @@ logfile_suffix = batch_id + "-" + logfile_id + "-" + logfile_epoch_suffix
 detail_file = "restore-check-" + logfile_suffix + "-detail.log"
 summary_file = "restore-check-" + logfile_suffix + "-summary.log"
 inventory_report_csv = "restore-check-inventory-report-" + logfile_suffix + ".csv"
-# If a profile is specified, use it (error out if the profile isn't found)
-if profile:
+
+
+# I'm sure there is a way to do this more elegantly...
+# First priority: If --env is specified, use the environment variables
+# Second priority: if --profile is specified, use the profile name
+# Last priority: if nothing is specified, use the current user
+if env:
     try:
-        boto3.setup_default_session(profile_name=profile)
+        boto3.setup_default_session(
+            aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+            aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+        )
+        s3_client = boto3.client(
+            's3'
+        )
+        s3 = boto3.resource('s3',
+                            aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+                            aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY']
+                            )
     except Exception as err:
         print(err)
         exit()
+elif profile:
+    boto3.setup_default_session(profile_name=profile)
+    s3_client = boto3.client('s3')
+    s3 = boto3.resource('s3')
+else:
+    s3_client = boto3.client('s3')
+    s3 = boto3.resource('s3')
 
-s3_client = boto3.client('s3')
+
 detail_f = open(detail_file, "a")
 summary_f = open(summary_file, "a")
 inventory_report_f = open(inventory_report_csv, "a")
 
-print(f"Started at {time.strftime('%X', start_time)}")
-detail_f.write(f"=== Started at {time.strftime('%X', start_time)}" + "\n")
-summary_f.write(f"=== Started at {time.strftime('%X', start_time)}" + "\n")
+
+start_time_log = "=== Started at " + \
+    str(time.strftime('%X', start_time)) + "\n"
+print(start_time_log)
+detail_f.write(start_time_log + "\n")
+summary_f.write(start_time_log + "\n")
+
+print("Inventory Report File: " + inventory_report_csv)
+print("Summary Logfile:       " + summary_file)
+print("Detail Log File:       " + detail_file)
+
+print(f"Analyzing inventory file...")
+linecount = len(open(inventory_file).readlines())
+log_msg = "Number of lines in the " + inventory_file + \
+    " inventory file: " + str(linecount) + "\n"
+
+print(log_msg)
+summary_f.write(log_msg)
+detail_f.write(log_msg)
 
 if last:  # if the --last option is passed
-    print(f"Analyzing inventory file...")
-    linecount = len(open(inventory_file).readlines())
-
     starting_point = linecount - last
 
     if starting_point < 0:
@@ -75,16 +113,12 @@ if last:  # if the --last option is passed
               " lines. The last variable of " + str(last) + " must be equal or less than that.")
         quit()
 
-    print("Number of lines in the " + inventory_file +
-          " inventory file: " + str(linecount))
-    print("Show the last " + str(last) + " lines.")
-    print("Starting point: " + str(starting_point))
+    log_msg = "Show the last " + str(last) + " lines." + "\n" + \
+        "Starting point: " + str(starting_point) + "\n"
 
-    summary_f.write(f"Number of lines in the " + inventory_file + " inventory file: " + str(linecount) + "\n" +
-                    "Show the last " +
-                    str(last) + " lines starting at " +
-                    str(starting_point) + "\n"
-                    )
+    print(log_msg)
+    summary_f.write(log_msg)
+    detail_f.write(log_msg)
 
 if dryrun:  # if --dryrun is passed
     print(f"********* DRY RUN **********")
@@ -115,32 +149,40 @@ with open(inventory_file) as file:
                 Key=object
             )
         except ClientError as e:
-            print("ERROR " + e.response['Error']['Code'] +
-                  " on Bucket: " + bucket + " / Object: " + object)
-            detail_f.write("Error " + e.response['Error']['Code'] +
-                           " on Bucket: " + bucket + " / Object: " + object)
+            error_msg = "ERROR " + e.response['Error']['Code'] + \
+                " on Bucket: " + bucket + " / Object: " + object + "\n"
+            print(error_msg)
+            detail_f.write(error_msg)
             objecthead_error_count += 1
             object_count += 1
             continue
 
-        if (object_count % 10 == 0) and (object_count > 0):
-            print(str(object_count) + " objects checked")
+        if not show and (object_count % 10 == 0) and (object_count > 0):
+            print(str(object_count) + " objects of " +
+                  str(linecount) + " checked")
 
         object_count += 1
 
+        log_msg = "Object " + str(object_count) + \
+            " of " + str(linecount) + ": " + object + " "
+        detail_f.write(log_msg)
         if show:
-            print("Object: " + object)
-
-        detail_f.write("Object: " + object + "\n")
+            print(log_msg)
 
         response_http = responsehead['ResponseMetadata']['HTTPHeaders']
 
         if 'x-amz-restore' in response_http:
             restore_response = response_http['x-amz-restore']
-            restore_status = restore_response.split(", ", 1)[0]
-            restore_expiry = restore_response.split(", ", 1)[1]
-
-            restore_ongoing = restore_status.split("=")[1]
+            try:
+                restore_status = restore_response.split(", ", 1)[0]
+                restore_expiry = restore_response.split(", ", 1)[1]
+                restore_ongoing = restore_status.split("=")[1]
+            except IndexError as restore_err:
+                error_msg = "Something went awry with " + restore_response + "\n"
+                detail_f.write(error_msg)
+                print(error_msg)
+                objecthead_error_count += 1
+                continue
 
             if restore_ongoing == '"false"':
                 restore_complete_count = restore_complete_count + 1
@@ -149,9 +191,13 @@ with open(inventory_file) as file:
             else:
                 restore_incomplete_count = restore_incomplete_count + 1
 
-        for a, b in response_http.items():
+            detail_f.write("restore details: " + restore_response)
+            if show:
+                print("   restore details: " + restore_response)
+
+        # for a, b in response_http.items():
             # print(a, b)
-            detail_f.write(a + " " + b + ", ")
+        #    detail_f.write(a + " " + b + ", ")
 
         detail_f.write("\n")
 
@@ -160,42 +206,27 @@ with open(inventory_file) as file:
 end_time = time.localtime()
 time_diff = time.mktime(end_time) - time.mktime(start_time)
 
-#### Detail Logging ####
-detail_f.write(f"Objects traversed: " + str(object_count) + "\n")
-detail_f.write(f"Objects restore complete: " +
-               str(restore_complete_count) + "\n")
-detail_f.write(f"Objects restore incomplete: " +
-               str(restore_incomplete_count) + "\n")
-detail_f.write(f"Objects with errors: " +
-               str(objecthead_error_count) + "\n")
-detail_f.write(f"=== Ended at {time.strftime('%X', end_time)}" + "\n")
-detail_f.write(f"Total time: " + str(time_diff) + " seconds\n")
-
-#### Summary Logging ####
-summary_f.write(f"Objects traversed: " + str(object_count) + "\n")
-summary_f.write(f"Objects restore complete: " +
-                str(restore_complete_count) + "\n")
-summary_f.write(f"Objects restore incomplete: " +
-                str(restore_incomplete_count) + "\n")
-summary_f.write(f"Objects with errors: " +
-                str(objecthead_error_count) + "\n")
-summary_f.write(f"=== Ended at {time.strftime('%X', end_time)}" + "\n")
-summary_f.write(f"Total time: " + str(time_diff) + " seconds\n")
-
-#### Screen Output ###
 if object_count > 0:
     time_per_object = time_diff / object_count
 else:
     time_per_object = 0
 
-print(f"Ended at {time.strftime('%X', end_time)}")
-print(f"Total time: " + str(time_diff) + " seconds")
-print(f"Avg per object: " + str(time_per_object))
-print(f"Total objects: " + str(object_count))
-print(f"Objects restore complete: " + str(restore_complete_count))
-print(f"Objects restore incomplete: " + str(restore_incomplete_count))
-print(f"Objects with errors: " +
-      str(objecthead_error_count) + "\n")
+summary_log = \
+    "=== Ended at " + str(time.strftime('%X', end_time)) + "\n" + \
+    "Objects traversed: " + str(object_count) + "\n" + \
+    "Objects restore complete: " + str(restore_complete_count) + "\n" + \
+    "Objects restore incomplete: " + str(restore_incomplete_count) + "\n" + \
+    "Objects with errors: " + str(objecthead_error_count) + "\n" + \
+    "Total time: " + str(time_diff) + " seconds\n" + \
+    "Avg per object: " + str(time_per_object) + "\n"
+
+#### Detail Logging ####
+detail_f.write(summary_log)
+
+#### Summary Logging ####
+summary_f.write(summary_log)
+
+print(summary_log)
 print(f"Summary Log:                 " + summary_file)
 print(f"Detail Log:                  " + detail_file)
 print(f"Restore Check Inventory CSV: " + inventory_report_csv)
