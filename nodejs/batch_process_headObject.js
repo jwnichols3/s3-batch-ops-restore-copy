@@ -39,12 +39,12 @@ const getObject = async (bucket, key) => {
     //start a time to track how long the async code runs
     console.time('How long did it take')
     //final results is a summary object that gets built up with each batch using a promise chain
-    const finalResults = await manifest_parts.reduce((promiseChain, loop) =>{
+    const finalResults = await manifest_parts.reduce((promiseChain, batch) =>{
         let nextBatch = promiseChain.then( async summary => {
-            let result = await Promise.all(loop.map(row => {
+            let result = await Promise.all(batch.map(row => {
                  return client.send(new HeadObjectCommand({Bucket:BUCKET, Key: row}))
             }))
-            summary.TotalObjects += loop.length
+            summary.TotalObjects += batch.length
             summary.RestoreFinished += result.filter(i => i.Restore && i.Restore.split(',')[0] === 'ongoing-request="false"').length
             summary.RestoreStarted += result.filter(i => i.Restore && i.Restore.split(',')[0] === 'ongoing-request="true"').length
             console.log('heartbeat:',summary)
